@@ -1,6 +1,7 @@
 const express = require("express");
 const dotenv = require("dotenv");
 const mongoose = require("mongoose");
+const encrypt = require("mongoose-encryption");
 
 const app = express();
 dotenv.config();
@@ -24,9 +25,15 @@ const connectToDB = async () => {
 connectToDB();
 
 // Create register schema
-const userSchema = mongoose.Schema({
+const userSchema = new mongoose.Schema({
   name: String,
   password: String,
+});
+
+// Encrypt password using mongoose-encryption
+userSchema.plugin(encrypt, {
+  secret: process.env.SECRET_KEY,
+  encryptedFields: ["password"],
 });
 
 // Create User model
