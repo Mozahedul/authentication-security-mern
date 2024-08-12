@@ -1,7 +1,8 @@
 require("dotenv").config();
 const express = require("express");
 const mongoose = require("mongoose");
-const md5 = require("md5");
+const bcrypt = require("bcrypt");
+const saltRounds = bcrypt.genSaltSync(10);
 
 const app = express();
 
@@ -46,16 +47,19 @@ app.get("/register", function (req, res) {
 app.post("/register", async (req, res) => {
   const { username, password } = req.body;
   try {
-    const newUser = new User({
-      name: username,
-      password: md5(password),
-    });
+    const hashedPassword = await bcrypt.hash(password, saltRounds);
+    if (hashedPassword) {
+      const newUser = new User({
+        name: username,
+        password: hashedPassword,
+      });
 
-    const savedUser = await newUser.save();
-    if (savedUser) {
-      res.render("secrets");
-    } else {
-      res.send("User does not created");
+      const savedUser = await newUser.save();
+      if (savedUser) {
+        res.render("secrets");
+      } else {
+        res.send("User does not created");
+      }
     }
   } catch (error) {
     console.log("Error on Registration: => ", error);
@@ -64,15 +68,19 @@ app.post("/register", async (req, res) => {
 
 app.post("/login", async function (req, res) {
   const username = req.body.username;
-  const password = md5(req.body.password);
+  const password = req.body.password;
   try {
     const foundUser = await User.findOne({ name: username });
 
+    console.log("found user", foundUser);
+
     if (foundUser) {
-      if (foundUser.password === password) {
+      // const userNewPassword = await bcrypt.hash(password, saltRounds);
+      const match = await bcrypt.compare(password, foundUser.password);
+      if (match) {
         res.render("secrets");
       } else {
-        console.log("The password you entered is not correct");
+        console.log("Passwords do not match");
       }
     } else {
       console.log("USER NOT FOUND", username);
